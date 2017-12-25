@@ -72,7 +72,6 @@ public class Tests {
 
         battleManagerTest1.putUnity(new Player("-"), new Point(0, 5), battleManagerTest1.getGenerator());
         assertFalse(battleManagerTest1.getAdjutantAttacker().checkTarget(battleManagerTest1, new Point(0, 4), new Point(0, 15)));
-        //Вывод поля боя:
 
         battleManagerTest1.putUnity(battleManagerTest1.getPlayer(), new Point(15, 0), battleManagerTest1.getTank());
         battleManagerTest1.putUnity(battleManagerTest1.getPlayer(), new Point(8, 0), battleManagerTest1.getGenerator());
