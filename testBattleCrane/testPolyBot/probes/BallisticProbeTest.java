@@ -60,7 +60,7 @@ public final class BallisticProbeTest implements TestInitializer {
             manager.putUnity(manager.getPlayer(), point1, unityGunner);
             manager.putUnity(manager.getPlayerRed(), new Point(7, 8), unityTank);
             manager.putUnity(manager.getPlayer(),  new Point(0, 7), unityGunner);
-        }, 130.0);
+        }, 122.5);
     }
 
     @Override

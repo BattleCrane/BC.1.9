@@ -5,11 +5,13 @@ import game.battleFields.Point;
 import botInterface.probes.Probe;
 import game.players.Player;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,12 +25,34 @@ public final class PolyZoneProbe implements Probe {
     private Set<Point> leftLine;
     private Set<Point> rightLine;
 
+    private Set<Point> defendLines;
+    private Set<Point> attackLines;
+
     public PolyZoneProbe(BattleManager battleManager) {
         this.battleManager = battleManager;
+        initLines();
+        initDefendAttackLines();
     }
 
     static final class ZoneParams extends Params {
-        public ZoneParams() {}
+        public ZoneParams() {
+        }
+    }
+
+    static final class Liner{
+
+    }
+
+    private interface Filler {
+        default Set<Point> fill(int startX, int endX, int startY, int endY) {
+            Set<Point> line = new HashSet<>();
+            for (int i = startX; i < endX; i++) {
+                for (int j = startY; j < endY; j++) {
+                    line.add(new Point(i, j));
+                }
+            }
+            return line;
+        }
     }
 
     @Override
@@ -46,9 +70,9 @@ public final class PolyZoneProbe implements Probe {
                     Matcher matcher = basicPattern.matcher(current);
                     Matcher matcherBonus = bonusPattern.matcher(current);
                     if (matcherBonus.find() || matcher.find()) { //Если это вражеский юнит, кторый стреляет по прямым и диагоналям:
-                        for (int m = -1; m <= 1; m++){
-                            for (int k = -1; k <= 1; k++){
-                                if (m == 0 && k == 0){
+                        for (int m = -1; m <= 1; m++) {
+                            for (int k = -1; k <= 1; k++) {
+                                if (m == 0 && k == 0) {
                                     continue;
                                 }
                                 directShift(currentPlayer, matrix, zone, m, k, new Point(j, i));
@@ -67,40 +91,6 @@ public final class PolyZoneProbe implements Probe {
         return zone;
     }
 
-    private Object probeDangerousZone(){
-        Set<Point> zone = new HashSet<>();
-        List<List<String>> matrix = battleManager.getBattleField().getMatrix();
-        Pattern basicPattern = Pattern.compile("[GT]");
-        Pattern turretPattern = Pattern.compile("[tu]");
-        Pattern bonusPattern = Pattern.compile("[HCBEiQ]");
-        Player currentPlayer = battleManager.getPlayer();
-        for (int i = 0; i < 16; i++) {
-            for (int j = 0; j < 16; j++) {
-                String current = matrix.get(i).get(j);
-                if (current.substring(3, 4).equals(battleManager.getOpponentPlayer().getColorType())) { //Если это точка противника
-                    Matcher matcher = basicPattern.matcher(current);
-                    Matcher matcherBonus = bonusPattern.matcher(current);
-                    if (matcherBonus.find() || matcher.find()) { //Если это вражеский юнит, кторый стреляет по прямым и диагоналям:
-                        for (int m = -1; m <= 1; m++){
-                            for (int k = -1; k <= 1; k++){
-                                if (m == 0 && k == 0){
-                                    continue;
-                                }
-                                directShift(currentPlayer, matrix, zone, m, k, new Point(j, i));
-                            }
-                        }
-                    }
-                    Matcher matcherTurret = turretPattern.matcher(current);
-                    //Если это вражеская турель:
-                    if (matcherTurret.find()) {
-                        radiusShift(zone, getRadius(current.substring(4, 5)), new Point(j, i));
-                    }
-                }
-            }
-        }
-        dangerousZone = zone;
-        return zone;
-    }
 
     //Определение опасных точек от автоматчиков, танков:
     private void directShift(Player currentPlayer, List<List<String>> matrix, Set<Point> listDangerousZone
@@ -142,7 +132,7 @@ public final class PolyZoneProbe implements Probe {
     }
 
     @Contract(pure = true)
-    int getRadius(String current) {
+    final int getRadius(String current) {
         int radius;
         switch (current) {
             case "t":
@@ -162,15 +152,117 @@ public final class PolyZoneProbe implements Probe {
         return dangerousZone;
     }
 
-    public Set<Point> initMainLine(){
+    public final Set<Point> initMainLine() {
         mainLine = new HashSet<>();
-        List<Point> points = Arrays.asList(new Point (1, 0), new Point(1, 1), new Point(0, 1));
-        for (Point point: points){
-            for (int i = 0; i < 15; i++){
+        List<Point> points = Arrays.asList(new Point(1, 0), new Point(1, 1), new Point(0, 1));
+        for (Point point : points) {
+            for (int i = 0; i < 15; i++) {
                 mainLine.add(new Point(point.X() + i, point.Y() + i));
             }
         }
         return mainLine;
     }
 
+    public final void initLines() {
+        initMainLine();
+        Filler filler = new Filler() {
+        };
+        leftLine = filler.fill(0, 2, 0, 16);
+        rightLine = filler.fill(14, 16, 0, 16);
+        topLine = filler.fill(0, 16, 0, 2);
+        downLine = filler.fill(0, 16, 14, 16);
+    }
+
+
+    private void initDefendAttackLines() {
+        defendLines = new HashSet<>();
+        attackLines = new HashSet<>();
+        if (battleManager.getPlayer().equals(battleManager.getPlayerBlue())) {
+            defendLines.addAll(downLine);
+            defendLines.addAll(rightLine);
+            attackLines.addAll(topLine);
+            attackLines.addAll(leftLine);
+        } else {
+            defendLines.addAll(topLine);
+            defendLines.addAll(leftLine);
+            attackLines.addAll(downLine);
+            attackLines.addAll(rightLine);
+        }
+    }
+
+    @Contract(pure = true)
+    public BattleManager getBattleManager() {
+        return battleManager;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getLeftLine() {
+        return leftLine;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getMainLine() {
+        return mainLine;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getDownLine() {
+        return downLine;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getTopLine() {
+        return topLine;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getRightLine() {
+        return rightLine;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getDefendLines() {
+        return defendLines;
+    }
+
+    @Contract(pure = true)
+    public Set<Point> getAttackLines() {
+        return attackLines;
+    }
 }
+
+
+//    private Object probeDangerousZone() {
+//        Set<Point> zone = new HashSet<>();
+//        List<List<String>> matrix = battleManager.getBattleField().getMatrix();
+//        Pattern basicPattern = Pattern.compile("[GT]");
+//        Pattern turretPattern = Pattern.compile("[tu]");
+//        Pattern bonusPattern = Pattern.compile("[HCBEiQ]");
+//        Player currentPlayer = battleManager.getPlayer();
+//        for (int i = 0; i < 16; i++) {
+//            for (int j = 0; j < 16; j++) {
+//                String current = matrix.get(i).get(j);
+//                if (current.substring(3, 4).equals(battleManager.getOpponentPlayer().getColorType())) { //Если это точка противника
+//                    Matcher matcher = basicPattern.matcher(current);
+//                    Matcher matcherBonus = bonusPattern.matcher(current);
+//                    if (matcherBonus.find() || matcher.find()) { //Если это вражеский юнит, кторый стреляет по прямым и диагоналям:
+//                        for (int m = -1; m <= 1; m++) {
+//                            for (int k = -1; k <= 1; k++) {
+//                                if (m == 0 && k == 0) {
+//                                    continue;
+//                                }
+//                                directShift(currentPlayer, matrix, zone, m, k, new Point(j, i));
+//                            }
+//                        }
+//                    }
+//                    Matcher matcherTurret = turretPattern.matcher(current);
+//                    //Если это вражеская турель:
+//                    if (matcherTurret.find()) {
+//                        radiusShift(zone, getRadius(current.substring(4, 5)), new Point(j, i));
+//                    }
+//                }
+//            }
+//        }
+//        dangerousZone = zone;
+//        return zone;
+//    }

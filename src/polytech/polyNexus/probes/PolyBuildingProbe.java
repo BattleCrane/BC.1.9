@@ -19,15 +19,17 @@ public final class PolyBuildingProbe implements Probe {
     private final Logger logger = Logger.getLogger(PolyBuildingProbe.class.getName());
 
     {
-
         ConsoleHandler consoleHandler = new ConsoleHandler(){{
            setLevel(Level.WARNING);
         }};
         logger.setLevel(Level.WARNING);
         logger.addHandler(consoleHandler);
     }
+
     private final int WALL_COEFFICIENT = 16;
     private final double DISTANCE_COEFFICIENT = 0.1;
+    private final double WING_DEFEND_COEFFICIENT = 1.2;
+    private final double MAIN_DEFEND_COEFFICIENT = 1.5;
 
     private final AdjutantFielder adjutantFielder = new AdjutantFielder();
 
@@ -60,7 +62,6 @@ public final class PolyBuildingProbe implements Probe {
         return probeBuilding(buildingParams.unity, buildingParams.point);
     }
 
-    //Прямая точка:
     @NotNull
     private PriorityUnit probeBuilding(Unity unity, Point point) {
         double startValue = map.getPriorities().get(unity.getId().charAt(0));
@@ -71,9 +72,27 @@ public final class PolyBuildingProbe implements Probe {
                     value = -value;
                     break;
                 }
+//                if (battleManager.getHowCanBuildFactories() > 0){
+//                    if (zoneProbe.getDefendLines().contains(new Point(j, i)) && unity.getId().equals("w")){
+//                        value *= WING_DEFEND_COEFFICIENT;
+//                    }
+//                    if (zoneProbe.getMainLine().contains(new Point(j, i)) && unity.getId().equals("w")){
+//                        value *= MAIN_DEFEND_COEFFICIENT;
+//                    }
+//                }
             }
         }
-        value += probeLock(unity, point);
+        if (unity.getId().equals("g")){
+            value -=probeLock(unity, point);
+        } else {
+            value += probeLock(unity, point);
+        }
+//        if (unity.getId().equals("w")){
+//            int lock = probeLock(unity, point);
+//            if (lock < 0){
+//                value += MAIN_DEFEND_COEFFICIENT * lock;
+//            }
+//        }
         PolyDistanceProbe.Params params = new PolyDistanceProbe.Params(unity.getWidth(), unity.getHeight(), point);
         Integer distance = (Integer) distanceProbe.probe(params);
         logger.info("Distance: " + distance);

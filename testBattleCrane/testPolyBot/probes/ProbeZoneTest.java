@@ -40,6 +40,17 @@ public final class ProbeZoneTest implements TestInitializer {
         markTerritory(manager, mainLine);
     }
 
+    @Test
+    public final void initLines(){
+        BattleManager manager = initBattleManager();
+        PolyZoneProbe probe = PolyNexus.createZoneProbe(manager);
+        probe.initLines();
+        markTerritory(manager, probe.getTopLine());
+        markTerritory(manager, probe.getDownLine());
+        markTerritory(manager, probe.getLeftLine());
+        markTerritory(manager, probe.getRightLine());
+    }
+
     private void markTerritory(BattleManager battleManager, Set<Point> listOfDangerousZone){
         for (Point point : listOfDangerousZone) {
             battleManager.getBattleField().getMatrix().get(point.Y()).set(point.X(), "XXXXXX");
